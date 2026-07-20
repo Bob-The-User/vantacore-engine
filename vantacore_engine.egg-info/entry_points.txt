@@ -1,0 +1,2 @@
+[console_scripts]
+vantacore = vantacore_engine.cli:main

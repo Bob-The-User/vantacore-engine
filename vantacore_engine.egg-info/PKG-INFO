@@ -1,0 +1,40 @@
+Metadata-Version: 2.4
+Name: vantacore-engine
+Version: 0.1.0
+Summary: Zero-knowledge memory forensics engine
+License: AGPL-3.0-or-later
+Classifier: License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+License-File: LICENSES.md
+Dynamic: license-file
+
+# VantaCore Engine
+
+> Zero-knowledge memory forensics platform — open-source CLI & core library.
+
+VantaCore Engine is a CLI tool and Python library for forensic analysis of raw DRAM dumps, ELF64 core dumps (including Cisco ASA `lina` coredumps), and network/security appliance memory images.
+
+## License
+
+AGPL-3.0-or-later. See [LICENSE](LICENSE).
+
+## Status
+
+🚧 Under active development — Phase 1A (Scaffolding) in progress.
+
+## Quick Start
+
+```bash
+# Coming in Phase 1A
+pixi install
+vantacore version
+```
+
+## Documentation
+
+Full documentation will be available at [vantacore.io/docs](https://vantacore.io/docs) upon Phase 1F release.

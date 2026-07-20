@@ -1,0 +1,40 @@
+[workspace]
+name = "vantacore-engine"
+version = "0.1.0"
+description = "Zero-knowledge memory forensics engine"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+python = ">=3.11,<3.13"
+numpy = ">=1.26"
+libblas = { version = "*", build = "*openblas" }
+capstone = ">=5.0"
+rich = ">=13.0"
+pyelftools = ">=0.31"
+lz4 = ">=4.3"
+zstandard = ">=0.22"
+
+[pypi-dependencies]
+yara-python = ">=4.5"
+google-re2 = ">=1.1"
+vantacore-engine = { path = ".", editable = true }
+
+[feature.dev.pypi-dependencies]
+pytest = ">=8.0"
+pytest-cov = ">=5.0"
+pytest-timeout = ">=2.3"
+ruff = ">=0.6"
+pip-licenses = ">=4.0"
+mkdocs-material = ">=9.5"
+sphinx = ">=7.0"
+sphinx-autodoc-typehints = ">=2.0"
+
+[environments]
+default = ["dev"]
+
+[tasks]
+test = "pytest tests/unit/ -v --timeout=60"
+test-full = "pytest -v --timeout=300 --cov=vantacore_engine --cov-report=term-missing"
+lint = "ruff check vantacore_engine/ tests/"
+generate-fixtures = "python tests/fixtures/generate_fixtures.py"

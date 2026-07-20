@@ -1,0 +1,5 @@
+site_name: VantaCore Engine
+theme:
+  name: material
+strict: true
+nav: []

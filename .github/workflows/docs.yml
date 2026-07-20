@@ -1,0 +1,10 @@
+name: Docs
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    if: false   # Activated in Phase 1F when docs content exists
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Docs deployment enabled in Phase 1F"
