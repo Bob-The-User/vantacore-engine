@@ -1,0 +1,48 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# Build / packaging artifacts
+*.egg-info/
+*.egg
+dist/
+build/
+wheels/
+*.whl
+*.tar.gz
+MANIFEST
+
+# Pixi environment (local install — NOT pixi.lock; lock file MUST be committed)
+.pixi/
+
+# Pytest / coverage caches
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Ruff cache
+.ruff_cache/
+
+# MyPy cache
+.mypy_cache/
+.dmypy.json
+
+# Editor / IDE artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Docs build output (activated Phase 1F)
+site/
+
+# Local env overrides
+.env
+.env.local
