@@ -23,3 +23,4 @@ vantacore version
 ## Documentation
 
 Full documentation will be available at [vantacore.io/docs](https://vantacore.io/docs) upon Phase 1F release.
+
