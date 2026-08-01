@@ -54,7 +54,7 @@ def audit_licenses(packages: List[Dict[str, str]]) -> int:
         )
         for pkg in gpl_packages:
             print(
-                f"  - {pkg.get('Name', 'Unknown')}: {license_str}",
+                f"  - {pkg.get('Name', 'Unknown')}: {pkg.get('License', 'Unknown')}",
                 file=sys.stderr,
             )
         return 1

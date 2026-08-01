@@ -10,6 +10,7 @@ def _cmd_version(args: argparse.Namespace) -> None:
 
     Args:
         args: Command-line arguments from argparse.
+
     """
     print(f"vantacore-engine {__version__}")
     print(f"Python {sys.version}")
@@ -21,6 +22,7 @@ def _cmd_scan(args: argparse.Namespace) -> None:
 
     Args:
         args: Command-line arguments from argparse.
+
     """
     print("'scan' is not available yet. It will be implemented in a later phase.")
     sys.exit(0)
@@ -31,6 +33,7 @@ def _cmd_detect(args: argparse.Namespace) -> None:
 
     Args:
         args: Command-line arguments from argparse.
+
     """
     print("'detect' is not available yet. It will be implemented in a later phase.")
     sys.exit(0)
@@ -41,6 +44,7 @@ def _cmd_verify(args: argparse.Namespace) -> None:
 
     Args:
         args: Command-line arguments from argparse.
+
     """
     print("'verify' is not available yet. It will be implemented in a later phase.")
     sys.exit(0)

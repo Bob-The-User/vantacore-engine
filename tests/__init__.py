@@ -1,1 +1,1 @@
-# Test package root
+"""Test package for VantaCore Engine."""

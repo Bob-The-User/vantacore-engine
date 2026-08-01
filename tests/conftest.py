@@ -16,6 +16,7 @@ def tmp_output_dir(tmp_path: Path) -> Path:
 
     Returns:
         Path to a newly created 'output' subdirectory.
+
     """
     out = tmp_path / "output"
     out.mkdir()
@@ -28,6 +29,7 @@ def dump_path() -> Callable[[str], Path]:
 
     Returns:
         A factory function taking a string filename and returning a Path object.
+
     """
 
     def _factory(name: str) -> Path:
@@ -38,6 +40,7 @@ def dump_path() -> Callable[[str], Path]:
 
         Returns:
             Absolute Path to the fixture.
+
         """
         return FIXTURES_DIR / name
 
