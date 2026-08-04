@@ -150,14 +150,33 @@ def generate_cisco_asa_lina() -> None:
     print(f"Generated {out_path.name} ({len(full_data)} bytes)")
 
 
+def generate_cisco_iosxe() -> None:
+    """Generate mock_cisco_iosxe.bin (ELF binary with IOS XE string identifiers)."""
+    buf = bytearray(512 * 1024)
+    e_ident = b"\x7fELF\x02\x01\x01\x00" + b"\x00" * 8
+    buf[0 : len(e_ident)] = e_ident
+    banner1 = b"Cisco IOS XE Software, Version 17.3.1\x00"
+    banner2 = b"IOSd\x00"
+
+    buf[0x10 : 0x10 + len(banner1)] = banner1
+    buf[0x200 : 0x200 + len(banner2)] = banner2
+
+    out_path = FIXTURES_DIR / "mock_cisco_iosxe.bin"
+    out_path.write_bytes(buf)
+    print(f"Generated {out_path.name} ({len(buf)} bytes)")
+
+
+
 def generate_all() -> None:
     """Generate all mock binary test fixtures."""
     FIXTURES_DIR.mkdir(parents=True, exist_ok=True)
     generate_elf_core()
     generate_raw_dram()
     generate_cisco_ios()
+    generate_cisco_iosxe()
     generate_cisco_asa_lina()
 
 
 if __name__ == "__main__":
     generate_all()
+

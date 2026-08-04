@@ -10,14 +10,15 @@ FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 
 
 def test_all_fixture_files_exist(dump_path: Callable[[str], Path]) -> None:
-    """Verify that exactly four binary fixture files exist."""
+    """Verify that exactly five binary fixture files exist."""
     bin_files = list(FIXTURES_DIR.glob("*.bin"))
-    assert len(bin_files) == 4, f"Found {len(bin_files)} .bin files, expected 4"
+    assert len(bin_files) == 5, f"Found {len(bin_files)} .bin files, expected 5"
 
     expected_files = {
         "mock_elf_core_x86_64.bin",
         "mock_raw_dram.bin",
         "mock_cisco_ios.bin",
+        "mock_cisco_iosxe.bin",
         "mock_cisco_asa_lina.bin",
     }
     actual_names = {f.name for f in bin_files}
@@ -30,11 +31,13 @@ def test_fixture_files_nonempty(dump_path: Callable[[str], Path]) -> None:
         "mock_elf_core_x86_64.bin",
         "mock_raw_dram.bin",
         "mock_cisco_ios.bin",
+        "mock_cisco_iosxe.bin",
         "mock_cisco_asa_lina.bin",
     ]:
         path = dump_path(filename)
         assert path.exists()
         assert path.stat().st_size > 0
+
 
 
 def test_x86_64_elf_magic(dump_path: Callable[[str], Path]) -> None:
@@ -121,6 +124,7 @@ def test_fixture_generator_is_deterministic() -> None:
         "mock_elf_core_x86_64.bin",
         "mock_raw_dram.bin",
         "mock_cisco_ios.bin",
+        "mock_cisco_iosxe.bin",
         "mock_cisco_asa_lina.bin",
     ]
 
