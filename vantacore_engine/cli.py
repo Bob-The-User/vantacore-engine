@@ -56,7 +56,7 @@ def _cmd_detect(args: argparse.Namespace) -> None:
         enc = EncryptedMemoryDetector().detect(fh, file_size)
         if enc["likely_encrypted"]:
             print(
-                f"WARNING: Dump shows high entropy ({enc['entropy']:.2f}). Memory may be encrypted.",
+                f"WARNING: Dump shows high entropy ({enc['confidence']:.2f}). Memory may be encrypted.",
                 file=sys.stderr,
             )
 
