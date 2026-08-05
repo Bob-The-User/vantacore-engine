@@ -22,15 +22,19 @@ class FaultyDetector(BaseApplianceDetector):
     """Faulty detector subclass that raises an exception during detection."""
 
     def platform_name(self) -> str:
+        """Return a fixed platform name for test identification."""
         return "faulty_platform"
 
     def detect(self, dump_handle: BinaryIO, file_size: int) -> float:
+        """Simulate a detection failure by raising a RuntimeError."""
         raise RuntimeError("Faulty detector simulation error")
 
     def get_translation_backend_class(self) -> Type[TranslationBackend]:
+        """Return FlatImageBackend as a no-op stub for test purposes."""
         return FlatImageBackend
 
     def get_compatible_extractor_paths(self) -> list[str]:
+        """Return a minimal extractor path list for test purposes."""
         return ["generic"]
 
 
