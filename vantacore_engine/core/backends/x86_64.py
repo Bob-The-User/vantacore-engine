@@ -80,7 +80,7 @@ class X86_64TranslationBackend(TranslationBackend):
             self._dump_handle.seek(offset)
             data = self._dump_handle.read(10)
             if len(data) == 10:
-                limit = struct.unpack_from("<H", data, 6)[0]
+                limit = struct.unpack_from("<H", data, 0)[0]
                 if 0x0100 <= limit <= 0x0FFF:
                     base = struct.unpack_from("<Q", data, 2)[0]
                     if base >= 0xFFFF800000000000:
