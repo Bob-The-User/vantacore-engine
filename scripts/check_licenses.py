@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
-"""Script to audit dependencies for GPL licenses."""
+"""Script to audit dependencies for GPL licenses.
+
+Can be run in two ways:
+  Standalone (recommended): pixi run python scripts/check_licenses.py
+  Piped (CI-compatible):    pixi run pip-licenses --format=json | pixi run python scripts/check_licenses.py
+
+When stdin is a terminal (not a pipe), the script automatically invokes
+pip-licenses as a subprocess so it never hangs waiting for input.
+"""
 
 import json
+import subprocess
 import sys
 from typing import List, Dict
 
@@ -63,13 +72,66 @@ def audit_licenses(packages: List[Dict[str, str]]) -> int:
     return 0
 
 
-def main() -> None:
-    """Main execution function to read JSON from stdin and audit."""
+def _fetch_licenses_via_subprocess() -> List[Dict[str, str]]:
+    """Run pip-licenses and return parsed JSON output.
+
+    Returns:
+        A list of package license dictionaries.
+
+    Raises:
+        SystemExit: If pip-licenses is not available or returns non-zero.
+    """
+    # Resolve the pip-licenses binary relative to the current Python interpreter
+    # so it always uses the same pixi environment, regardless of PATH.
+    pip_licenses_bin = str(
+        __import__("pathlib").Path(sys.executable).parent / "pip-licenses"
+    )
+
     try:
-        data = json.load(sys.stdin)
-    except json.JSONDecodeError as e:
-        print(f"Error parsing JSON from stdin: {e}", file=sys.stderr)
+        result = subprocess.run(
+            [pip_licenses_bin, "--format=json"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        print(
+            f"Error: pip-licenses not found at {pip_licenses_bin}. "
+            "Install it with: pixi add pip-licenses",
+            file=sys.stderr,
+        )
         sys.exit(1)
+
+    if result.returncode != 0:
+        print(
+            f"Error: pip-licenses exited with code {result.returncode}:\n{result.stderr}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as e:
+        print(f"Error parsing pip-licenses JSON output: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def main() -> None:
+    """Main execution function.
+
+    Reads license data from stdin if piped, otherwise invokes pip-licenses
+    as a subprocess automatically.
+    """
+    if sys.stdin.isatty():
+        # Not being piped — fetch licenses ourselves
+        data = _fetch_licenses_via_subprocess()
+    else:
+        # Being piped from pip-licenses (CI mode)
+        try:
+            data = json.load(sys.stdin)
+        except json.JSONDecodeError as e:
+            print(f"Error parsing JSON from stdin: {e}", file=sys.stderr)
+            sys.exit(1)
 
     if not isinstance(data, list):
         print("Expected JSON array from pip-licenses output", file=sys.stderr)
