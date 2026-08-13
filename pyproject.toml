@@ -22,3 +22,11 @@ vantacore = "vantacore_engine.cli:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["vantacore_engine*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["tests"]
+
+[tool.coverage.run]
+parallel = true
+concurrency = ["multiprocessing"]
+

@@ -94,3 +94,28 @@ def test_closed_buffer_put_raises_runtime_error() -> None:
             rb.put(0x100)
     finally:
         rb.unlink()
+
+
+def test_ring_buffer_close_oserror() -> None:
+    """Verify close handles OSError on underlying shared memory gracefully."""
+    from unittest.mock import patch
+
+    rb = SharedMemoryRingBuffer(capacity=8, create=True)
+    try:
+        with patch("multiprocessing.shared_memory.SharedMemory.close", side_effect=OSError("Mock close error")):
+            # Should not raise exception
+            rb.close()
+    finally:
+        # Re-close or unlink normally
+        rb.unlink()
+
+
+def test_ring_buffer_unlink_oserror() -> None:
+    """Verify unlink handles OSError on underlying shared memory gracefully."""
+    from unittest.mock import patch
+
+    rb = SharedMemoryRingBuffer(capacity=8, create=True)
+    with patch("multiprocessing.shared_memory.SharedMemory.unlink", side_effect=OSError("Mock unlink error")):
+        # Should not raise exception
+        rb.unlink()
+

@@ -48,6 +48,8 @@ class ScannerCoordinator:
         self._result_queue: Optional[multiprocessing.Queue] = None
         self._stop_event: Optional[multiprocessing.Event] = None
         self._workers: list[multiprocessing.Process] = []
+        self._respawn_counts: dict[int, int] = {}
+        self._worker_args: tuple = ()
         self._started: bool = False
 
     def start(self) -> None:
@@ -71,24 +73,27 @@ class ScannerCoordinator:
         self._stop_event = multiprocessing.Event()
         self._workers = []
 
+        self._worker_args = (
+            self._dump_path,
+            dump_file_size,
+            self._ring_buffer.data_name,
+            self._ring_buffer.meta_name,
+            self._ring_buffer_capacity,
+            self._result_queue,
+            self._stop_event,
+            self._window_size,
+        )
+
         for _ in range(self._num_workers):
             p = multiprocessing.Process(
                 target=scanner_worker_main,
-                args=(
-                    self._dump_path,
-                    dump_file_size,
-                    self._ring_buffer.data_name,
-                    self._ring_buffer.meta_name,
-                    self._ring_buffer_capacity,
-                    self._result_queue,
-                    self._stop_event,
-                    self._window_size,
-                ),
+                args=self._worker_args,
                 daemon=True,
             )
             p.start()
             self._workers.append(p)
 
+        self._respawn_counts = {i: 0 for i in range(len(self._workers))}
         self._started = True
         logger.info("ScannerCoordinator started %d workers", len(self._workers))
 
@@ -135,12 +140,48 @@ class ScannerCoordinator:
 
         return results
 
+    def _respawn_worker(self, worker_index: int) -> None:
+        """Respawn a worker process if it has not exceeded the single-respawn cap.
+
+        Args:
+            worker_index: Index integer of the worker process in self._workers.
+
+        """
+        if self._respawn_counts.get(worker_index, 0) >= 1:
+            pid = self._workers[worker_index].pid if worker_index < len(self._workers) else None
+            logger.critical(
+                "Worker at index %d (PID %s) crashed and has already been respawned once. Not respawning again.",
+                worker_index,
+                pid,
+            )
+            if self._stop_event is not None:
+                self._stop_event.set()
+            return
+
+        crashed_pid = self._workers[worker_index].pid if worker_index < len(self._workers) else None
+        p = multiprocessing.Process(
+            target=scanner_worker_main,
+            args=self._worker_args,
+            daemon=True,
+        )
+        p.start()
+        self._workers[worker_index] = p
+        self._respawn_counts[worker_index] = self._respawn_counts.get(worker_index, 0) + 1
+        logger.info(
+            "Respawned worker at index %d (old PID %s, new PID %d).",
+            worker_index,
+            crashed_pid,
+            p.pid,
+        )
+
     def _check_workers(self) -> None:
         """Check worker exit codes and log critical errors for non-zero exits."""
-        for worker in self._workers:
+        for i, worker in enumerate(self._workers):
             worker.join(timeout=0)
             if worker.exitcode is not None and worker.exitcode != 0:
-                logger.critical("ScannerWorker PID %d exited with code %d", worker.pid, worker.exitcode)
+                logger.critical("ScannerWorker PID %s exited with code %d", worker.pid, worker.exitcode)
+                if self._started:
+                    self._respawn_worker(i)
 
     def stop(self) -> None:
         """Stop worker subprocesses and clean up shared memory resources."""

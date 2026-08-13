@@ -214,7 +214,7 @@ def generate_elf_with_msr_note() -> None:
     # Note payload: 12 bytes note header + 8 bytes name + 16 bytes desc = 36 bytes
     note_header = struct.pack("<III", 6, 16, 0x202)  # namesz=6, descsz=16, type=0x202 (NT_X86_MSR)
     note_name = b"LINUX\x00\x00\x00"
-    note_desc = b"\x00" * 16
+    note_desc = struct.pack("<IQ", 0x982, 1) + b"\x00" * 4  # 12 bytes MSR entry + 4 bytes pad = 16 bytes
     note_data = note_header + note_name + note_desc
     assert len(note_data) == 36
 
