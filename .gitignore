@@ -42,6 +42,10 @@ Thumbs.db
 
 # Docs build output (activated Phase 1F)
 site/
+_build/
+
+# Scan output artifacts
+vantacore_output_*/
 
 # Local env overrides
 .env

@@ -66,24 +66,33 @@ def test_cli_direct_main_version(capsys: pytest.CaptureFixture[str]) -> None:
     assert "vantacore-engine" in captured.out
 
 
-def test_cli_direct_main_scan(capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_direct_main_scan(
+    dump_path: Callable[[str], Path], capsys: pytest.CaptureFixture[str]
+) -> None:
     """Verify direct invocation of cli.main with scan subcommand."""
-    with patch("sys.argv", ["vantacore", "scan", "mock.bin"]):
+    lina_path = str(dump_path("mock_cisco_asa_lina.bin"))
+    with patch("sys.argv", ["vantacore", "scan", "--json", lina_path]):
         with pytest.raises(SystemExit) as exc:
             cli.main()
         assert exc.value.code == 0
     captured = capsys.readouterr()
-    assert "not available yet" in captured.out
+    data = json.loads(captured.out)
+    assert "scan_status" in data
 
 
-def test_cli_direct_main_verify(capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_direct_main_verify(
+    dump_path: Callable[[str], Path], capsys: pytest.CaptureFixture[str]
+) -> None:
     """Verify direct invocation of cli.main with verify subcommand."""
-    with patch("sys.argv", ["vantacore", "verify"]):
+    lina_path = str(dump_path("mock_cisco_asa_lina.bin"))
+    with patch("sys.argv", ["vantacore", "verify", "--json", lina_path]):
         with pytest.raises(SystemExit) as exc:
             cli.main()
         assert exc.value.code == 0
     captured = capsys.readouterr()
-    assert "not available yet" in captured.out
+    data = json.loads(captured.out)
+    assert "sha256" in data
+    assert "platform" in data
 
 
 def test_cli_direct_main_no_args(capsys: pytest.CaptureFixture[str]) -> None:

@@ -145,9 +145,25 @@ def generate_cisco_asa_lina() -> None:
     note_data = note_header + note_name + note_desc
     assert len(note_data) == 156
 
-    version_str = b"Cisco Adaptive Security Appliance Software Version 9.14\x00"
+    # Padding up to byte 512
+    current_len = len(elf_header) + len(phdr) + len(note_data)
+    pad = b"\x00" * (512 - current_len)
 
-    full_data = elf_header + phdr + note_data + version_str
+    patterns = (
+        b"Cisco Adaptive Security Appliance Software Version 9.14.1.6\x00"
+        b"   TCP 10.0.0.1:1234 10.0.1.2:443, idle 0:00:01, bytes 1024, flags UIO\x00"
+        b"access-list OUTSIDE_IN extended permit tcp any host 10.0.0.1 eq 443\x00"
+        b"show conn\x00enable\x00configure terminal\x00show run\x00"
+        b"snmp-server community public RO\x00"
+        b"hostname ASA-FW-01\x00"
+    )
+
+    full_data = elf_header + phdr + note_data + pad + patterns
+    target_size = 512 * 1024
+    if len(full_data) < target_size:
+        full_data += b"\x00" * (target_size - len(full_data))
+
+    assert len(full_data) == 524288
 
     out_path = FIXTURES_DIR / "mock_cisco_asa_lina.bin"
     out_path.write_bytes(full_data)

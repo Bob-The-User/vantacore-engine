@@ -39,3 +39,21 @@ def test_e2e_linux_elf_extractor_flow(tmp_path: Path) -> None:
         assert res["scan_status"]["overall"] in ("COMPLETE", "PARTIAL")
         assert "generic/keys" in res["scan_status"]["extractors_succeeded"]
         assert "high_entropy_regions" in res
+
+
+def test_e2e_platform_filter_enforced() -> None:
+    """Verify ExtractorDAGExecutor filters out incompatible platform extractors."""
+    from vantacore_engine.extractors.cisco.asa.acl_rules import ASAACLRulesExtractor
+    from vantacore_engine.extractors.cisco.asa.conn_table import ASAConnTableExtractor
+    from vantacore_engine.extractors.cisco.asa.lina_process import LinaProcessExtractor
+    from vantacore_engine.extractors.cisco.asa.vpn_sessions import ASAVPNSessionsExtractor
+
+    asa_extractors = [
+        LinaProcessExtractor(),
+        ASAConnTableExtractor(),
+        ASAACLRulesExtractor(),
+        ASAVPNSessionsExtractor(),
+    ]
+    executor = ExtractorDAGExecutor(asa_extractors, "linux")
+    assert executor._execution_order == []
+

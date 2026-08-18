@@ -48,17 +48,18 @@ def test_cli_version_output_contains_package_name() -> None:
     assert "vantacore-engine" in result.stdout
 
 
-def test_cli_stub_scan_exits_zero() -> None:
-    """Verify that the stub 'scan' command exits with code 0."""
+def test_cli_scan_exits_zero() -> None:
+    """Verify that the 'scan' command exits with code 0 on a valid fixture."""
+    fixture_path = REPO_ROOT / "tests" / "fixtures" / "mock_cisco_asa_lina.bin"
     result = subprocess.run(
-        ["pixi", "run", "vantacore", "scan", "nosuchfile.bin"],
+        ["pixi", "run", "vantacore", "scan", str(fixture_path), "--json"],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
         check=True,
     )
     assert result.returncode == 0
-    assert "not available yet" in result.stdout
+    assert "scan_status" in result.stdout
 
 
 def test_cli_help_exits_zero() -> None:

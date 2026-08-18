@@ -93,3 +93,17 @@ def test_strings_extractor_nonzero_returncode_warning(caplog) -> None:
     assert "llvm-strings exited with code 1" in caplog.text
     assert res["strings"] == ["some_string"]
 
+
+def test_missing_llvm_strings_binary(monkeypatch) -> None:
+    """Verify _resolve_llvm_strings_binary raises RuntimeError when binary is absent."""
+    import shutil
+    import sys
+    from vantacore_engine.extractors.generic.strings import _resolve_llvm_strings_binary
+
+    monkeypatch.setattr(sys, "prefix", "/nonexistent")
+    monkeypatch.setattr(shutil, "which", lambda *a, **kw: None)
+
+    with pytest.raises(RuntimeError, match="llvm-strings binary not found"):
+        _resolve_llvm_strings_binary()
+
+

@@ -1,5 +1,41 @@
 site_name: VantaCore Engine
+site_description: Zero-knowledge memory forensics for network security appliances
+site_url: https://vantacore.github.io/vantacore-engine/
+repo_url: https://github.com/vantacore/vantacore-engine
 theme:
   name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - content.code.copy
 strict: true
-nav: []
+plugins:
+  - search
+markdown_extensions:
+  - admonition
+  - attr_list
+  - toc:
+      permalink: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quickstart: getting-started/quickstart.md
+    - Supported Platforms: getting-started/supported-platforms.md
+  - User Guide:
+    - CLI Reference: user-guide/cli-reference.md
+    - Dump Formats: user-guide/dump-formats.md
+    - Appliance Forensics: user-guide/appliance-forensics.md
+    - Chain of Custody: user-guide/chain-of-custody.md
+  - Developer Guide:
+    - Architecture Overview: developer-guide/architecture-overview.md
+    - Writing Backends: developer-guide/writing-backends.md
+    - Writing Extractors: developer-guide/writing-extractors.md
+    - Writing Appliance Detectors: developer-guide/writing-appliance-detectors.md
+    - Contributing: developer-guide/contributing.md

@@ -9,6 +9,7 @@ from vantacore_engine.core.backends.flat_image import FlatImageBackend
 from vantacore_engine.extractors.linux.process import (
     LinuxProcessExtractor,
     _TASK_COMM_OFFSET,
+    _TASK_PARENT_OFFSET,
     _TASK_PID_OFFSET,
     _TASK_STATE_OFFSET,
     _TASK_TASKS_NEXT,
@@ -119,4 +120,71 @@ def test_is_valid_kernel_va() -> None:
 
     assert _is_valid_kernel_va(0xFFFF800000000000) is True
     assert _is_valid_kernel_va(0x00007FFFFFFFFFFF) is False
+
+
+def test_dkom_carve_fallback() -> None:
+    """Verify carve path works and finds DKOM anomalies when kernel base cannot be resolved."""
+    from vantacore_engine.core.translation_base import PageFaultError
+
+    ext = LinuxProcessExtractor()
+    mock_backend = MagicMock()
+    mock_backend.get_kernel_base.side_effect = PageFaultError("Cannot resolve kernel base")
+
+    dump_buf = bytearray(0x1000)
+    struct.pack_into("<i", dump_buf, _TASK_PID_OFFSET, 999)
+    struct.pack_into("<i", dump_buf, _TASK_TGID_OFFSET, 999)
+    struct.pack_into("<q", dump_buf, _TASK_STATE_OFFSET, 0)
+    dump_buf[_TASK_COMM_OFFSET : _TASK_COMM_OFFSET + 16] = b"evil\x00" + b"\x00" * 11
+
+    fh = io.BytesIO(bytes(dump_buf))
+    res = ext.run(mock_backend, fh, Path("/tmp"))
+
+    assert len(res["dkom_anomalies"]) >= 1
+    assert res["dkom_anomalies"][0]["pid"] == 999
+    assert res["dkom_anomalies"][0]["comm"] == "evil"
+
+
+def test_linux_process_parent_ppid_resolution() -> None:
+    """Verify parent PID resolution in _read_task_struct."""
+    ext = LinuxProcessExtractor()
+    mock_backend = MagicMock()
+    mock_backend.get_kernel_base.return_value = 0xFFFF800000000000
+
+    init_va = 0xFFFF800000000000
+    child_va = 0xFFFF800000001000
+
+    parent_buf = bytearray(0x700)
+    struct.pack_into("<i", parent_buf, _TASK_PID_OFFSET, 1)
+    struct.pack_into("<i", parent_buf, _TASK_TGID_OFFSET, 1)
+    struct.pack_into("<q", parent_buf, _TASK_STATE_OFFSET, 0)
+    parent_buf[_TASK_COMM_OFFSET : _TASK_COMM_OFFSET + 7] = b"systemd"
+    struct.pack_into("<Q", parent_buf, _TASK_TASKS_NEXT, child_va + _TASK_TASKS_NEXT)
+
+    child_buf = bytearray(0x700)
+    struct.pack_into("<i", child_buf, _TASK_PID_OFFSET, 2)
+    struct.pack_into("<i", child_buf, _TASK_TGID_OFFSET, 2)
+    struct.pack_into("<q", child_buf, _TASK_STATE_OFFSET, 0)
+    child_buf[_TASK_COMM_OFFSET : _TASK_COMM_OFFSET + 5] = b"kthre"
+    struct.pack_into("<Q", child_buf, _TASK_PARENT_OFFSET, init_va)
+    struct.pack_into("<Q", child_buf, _TASK_TASKS_NEXT, 0)
+
+    def mock_read_virtual(ns, va, size):
+        if init_va <= va < init_va + len(parent_buf):
+            offset = va - init_va
+            return bytes(parent_buf[offset : offset + size])
+        if child_va <= va < child_va + len(child_buf):
+            offset = va - child_va
+            return bytes(child_buf[offset : offset + size])
+        return b"\x00" * size
+
+    mock_backend.read_virtual.side_effect = mock_read_virtual
+
+    fh = io.BytesIO(b"\x00" * 4096)
+    res = ext.run(mock_backend, fh, Path("/tmp"))
+
+    child_proc = next((p for p in res["processes"] if p["pid"] == 2), None)
+    assert child_proc is not None
+    assert child_proc["ppid"] == 1
+
+
 

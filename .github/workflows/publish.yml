@@ -1,0 +1,21 @@
+# MANUAL GATE: Run FTO patent search before first publish. See .agents/tasks.md -> Backlog.
+# Trigger: GitHub UI -> Actions -> Publish to PyPI -> Run workflow
+name: Publish to PyPI
+on:
+  workflow_dispatch:
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.10.0
+        with:
+          pixi-version: "v0.74.0"
+          cache: true
+      - name: Build distribution
+        run: pixi run python -m build
+      - name: Upload to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: pixi run twine upload dist/*

@@ -28,3 +28,12 @@ jobs:
 
       - name: Unit tests
         run: pixi run pytest tests/unit/ -v --timeout=60
+
+      - name: Full suite and coverage gate
+        run: pixi run pytest -v --timeout=300 --cov=vantacore_engine --cov-report=term-missing --cov-fail-under=80
+
+      - name: MkDocs build strict
+        run: pixi run mkdocs build --strict
+
+      - name: Sphinx API reference build
+        run: pixi run sphinx-build -b html docs/api-reference/ _build/api/ -W

@@ -119,3 +119,24 @@ def test_ring_buffer_unlink_oserror() -> None:
         # Should not raise exception
         rb.unlink()
 
+
+def test_is_empty_on_closed_buffer() -> None:
+    """Verify is_empty returns True on closed buffer."""
+    rb = SharedMemoryRingBuffer(capacity=8, create=True)
+    rb.close()
+    try:
+        assert rb.is_empty() is True
+    finally:
+        rb.unlink()
+
+
+def test_is_full_on_closed_buffer() -> None:
+    """Verify is_full returns False on closed buffer."""
+    rb = SharedMemoryRingBuffer(capacity=8, create=True)
+    rb.close()
+    try:
+        assert rb.is_full() is False
+    finally:
+        rb.unlink()
+
+
