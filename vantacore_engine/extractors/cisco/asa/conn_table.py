@@ -173,7 +173,9 @@ class ASAConnTableExtractor(BaseExtractor):
                         if "flags" in line:
                             flags_idx = tokens.index("flags") if "flags" in tokens else -1
                             if flags_idx != -1 and flags_idx + 1 < len(tokens):
-                                flags = [tokens[flags_idx + 1].strip(",")]
+                                raw_parts = tokens[flags_idx + 1].split("\x00")[0].split()
+                                raw_flag = raw_parts[0].strip(",") if raw_parts else ""
+                                flags = [raw_flag] if raw_flag else []
 
                         bytes_val = 0
                         if "bytes" in line:

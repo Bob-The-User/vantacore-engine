@@ -85,3 +85,57 @@ def test_entropy_detector_with_elf_fixture(dump_path: Callable[[str], Path]) -> 
     assert "confidence" in res
     assert isinstance(res["evidence"], list)
 
+
+def test_entropy_has_elftools_false_branch() -> None:
+    """Verify that EncryptedMemoryDetector handles HAS_ELFTOOLS=False gracefully."""
+    import unittest.mock
+
+    detector = EncryptedMemoryDetector()
+    data = b"\x7fELF" + (b"\x00" * 8192)
+    size = len(data)
+    handle = io.BytesIO(data)
+
+    with unittest.mock.patch("vantacore_engine.core.entropy.HAS_ELFTOOLS", False):
+        result = detector.detect(handle, size)
+
+    assert isinstance(result, dict)
+    assert result["likely_encrypted"] is False
+    assert result["evidence"] == []
+
+
+class _ShortReadBuffer(io.BytesIO):
+    """BytesIO subclass that returns short reads for 4096-byte requests."""
+
+    def read(self, size: int = -1) -> bytes:
+        """Return a single byte when 4096 bytes are requested."""
+        if size == 4096:
+            return b"\x00"
+        return super().read(size)
+
+
+def test_entropy_short_page_read_skipped() -> None:
+    """Verify that short page reads are skipped in sampling loop."""
+    detector = EncryptedMemoryDetector()
+    size = 16 * 4096
+    handle = _ShortReadBuffer(b"\x00" * size)
+
+    result = detector.detect(handle, size)
+    assert result["confidence"] == 0.0
+    assert result["likely_encrypted"] is False
+
+
+def test_entropy_logger_critical_called_on_encrypted() -> None:
+    """Verify that logger.critical is called when likely_encrypted is True."""
+    import unittest.mock
+
+    detector = EncryptedMemoryDetector()
+    size = 4 * 1024 * 1024
+    data = os.urandom(size)
+    handle = io.BytesIO(data)
+
+    with unittest.mock.patch("vantacore_engine.core.entropy.logger") as mock_logger:
+        result = detector.detect(handle, size)
+
+    assert mock_logger.critical.called
+    assert result["likely_encrypted"] is True
+

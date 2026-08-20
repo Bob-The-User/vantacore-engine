@@ -168,3 +168,45 @@ def test_configure_logging_root_logger(tmp_output_dir: Path) -> None:
     finally:
         logger.handlers = orig_handlers
 
+
+def test_logging_emit_exc_text_branch(tmp_output_dir: Path) -> None:
+    """Verify JSONLinesFileHandler includes exc_info when exception is logged."""
+    log_file = tmp_output_dir / "exc_test.jsonl"
+    handler = JSONLinesFileHandler(str(log_file))
+    logger = logging.getLogger("test_exc_text_logger")
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+    try:
+        raise RuntimeError("boom")
+    except RuntimeError:
+        logger.error("error occurred", exc_info=True)
+    handler.close()
+    record = json.loads(log_file.read_text(encoding="utf-8").strip())
+    assert "exc_info" in record
+    assert "RuntimeError: boom" in record["exc_info"]
+
+
+def test_logging_emit_stream_none_branch(tmp_output_dir: Path) -> None:
+    """Verify JSONLinesFileHandler.emit handles stream errors gracefully via handleError."""
+    import unittest.mock
+
+    log_file = tmp_output_dir / "stream_none.jsonl"
+    handler = JSONLinesFileHandler(str(log_file))
+    mock_stream = unittest.mock.MagicMock()
+    mock_stream.write.side_effect = OSError("Disk write failure")
+    handler.stream = mock_stream
+
+    record = logging.LogRecord(
+        name="test",
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
+        msg="test",
+        args=(),
+        exc_info=None,
+    )
+    with unittest.mock.patch.object(handler, "handleError") as mock_handle_error:
+        handler.emit(record)
+        assert mock_handle_error.called
+    handler.close()
+

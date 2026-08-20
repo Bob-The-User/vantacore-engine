@@ -13,6 +13,7 @@ from rich.console import Console
 from rich.table import Table
 
 from vantacore_engine import __version__
+from vantacore_engine.core.audit import ForensicAuditTrail
 from vantacore_engine.core.backends.appliances.generic_flat import GenericFlatDetector
 from vantacore_engine.core.backends.appliances.registry import PlatformDetectorRegistry
 from vantacore_engine.core.backends.detector import ArchitectureDetector
@@ -85,6 +86,7 @@ def _cmd_scan(args: argparse.Namespace) -> None:
         print(f"Error opening dump file: {err}", file=sys.stderr)
         sys.exit(1)
 
+    audit: ForensicAuditTrail | None = None
     try:
         file_size = os.path.getsize(args.dump)
 
@@ -128,6 +130,16 @@ def _cmd_scan(args: argparse.Namespace) -> None:
         )
         output_dir.mkdir(parents=True, exist_ok=True)
 
+        audit_path = output_dir / "vantacore_audit.jsonl"
+        audit = ForensicAuditTrail(audit_path, sha256)
+        audit.record(
+            ForensicAuditTrail.DUMP_INGESTED,
+            file_path=args.dump,
+            file_size=file_size,
+            platform=platform_name,
+            architecture=arch_name,
+        )
+
         include_secrets = getattr(args, "include_secrets", False)
         all_extractors = _discover_extractors(include_secrets=include_secrets)
         dag_executor = ExtractorDAGExecutor(all_extractors, platform_name)
@@ -135,11 +147,18 @@ def _cmd_scan(args: argparse.Namespace) -> None:
         fh.seek(0)
         result = dag_executor.execute(backend, fh, output_dir)
 
+        audit.record(
+            ForensicAuditTrail.SCAN_COMPLETED,
+            scan_status=result.get("scan_status", {}),
+        )
+
         output_json_path = output_dir / "vantacore_output.json"
         with open(output_json_path, "w", encoding="utf-8") as out_f:
             json.dump(result, out_f, indent=2)
 
     finally:
+        if audit is not None:
+            audit.close()
         fh.close()
 
     if getattr(args, "json_output", False):
