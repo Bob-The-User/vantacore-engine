@@ -149,5 +149,3 @@ See the [Contributing Guide](docs/developer-guide/contributing.md) for code styl
 ## License
 
 AGPL-3.0-or-later. See [LICENSE](LICENSE).
-
-A commercial Enterprise Edition (FastAPI + React WebGL UI, DuckDB OLAP backend, RBAC, OIDC/SAML SSO) is available separately. Contact us for licensing details.
