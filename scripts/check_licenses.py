@@ -2,17 +2,18 @@
 """Script to audit dependencies for GPL licenses.
 
 Can be run in two ways:
-  Standalone (recommended): pixi run python scripts/check_licenses.py
-  Piped (CI-compatible):    pixi run pip-licenses --format=json | pixi run python scripts/check_licenses.py
+  Standalone (default): pixi run python scripts/check_licenses.py
+  Piped (explicit):     pixi run pip-licenses --format=json | pixi run python scripts/check_licenses.py --from-stdin
 
-When stdin is a terminal (not a pipe), the script automatically invokes
-pip-licenses as a subprocess so it never hangs waiting for input.
+The script always self-invokes pip-licenses as a subprocess unless
+--from-stdin is explicitly passed. This works correctly in both
+interactive terminals and non-interactive CI environments.
 """
 
 import json
 import subprocess
 import sys
-from typing import List, Dict
+from typing import Dict, List
 
 # Allowlist for permitted GPL-like licenses (specifically LGPL)
 LGPL_ALLOWLIST = [
@@ -119,19 +120,20 @@ def _fetch_licenses_via_subprocess() -> List[Dict[str, str]]:
 def main() -> None:
     """Main execution function.
 
-    Reads license data from stdin if piped, otherwise invokes pip-licenses
-    as a subprocess automatically.
+    Reads license data from stdin when --from-stdin is passed explicitly,
+    otherwise always self-invokes pip-licenses as a subprocess. This works
+    correctly in both interactive terminals and non-interactive CI environments.
     """
-    if sys.stdin.isatty():
-        # Not being piped — fetch licenses ourselves
-        data = _fetch_licenses_via_subprocess()
-    else:
-        # Being piped from pip-licenses (CI mode)
+    if "--from-stdin" in sys.argv:
+        # Explicit pipe mode: caller piped pip-licenses JSON to us
         try:
             data = json.load(sys.stdin)
         except json.JSONDecodeError as e:
             print(f"Error parsing JSON from stdin: {e}", file=sys.stderr)
             sys.exit(1)
+    else:
+        # Default mode: self-invoke pip-licenses (works in TTY and CI)
+        data = _fetch_licenses_via_subprocess()
 
     if not isinstance(data, list):
         print("Expected JSON array from pip-licenses output", file=sys.stderr)
