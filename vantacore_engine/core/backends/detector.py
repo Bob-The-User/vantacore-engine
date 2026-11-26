@@ -13,12 +13,18 @@ logger = logging.getLogger(__name__)
 class ArchitectureDetector:
     """Detects target architecture and instantiates appropriate translation backend."""
 
-    def detect(self, dump_handle: BinaryIO, file_size: int) -> TranslationBackend:
+    def detect(
+        self,
+        dump_handle: BinaryIO,
+        file_size: int,
+        force_pml5: bool = False,
+    ) -> TranslationBackend:
         """Detect memory image architecture and return an initialized translation backend.
 
         Args:
             dump_handle: Open file-like handle to binary memory dump.
             file_size: Size of memory dump in bytes.
+            force_pml5: If True, force PML5 5-level paging for x86_64.
 
         Returns:
             Initialized instance of TranslationBackend subclass.
@@ -34,7 +40,10 @@ class ArchitectureDetector:
             backend = backend_cls()
             if backend.detect(dump_handle):
                 dump_handle.seek(0)
-                backend.initialize(dump_handle)
+                if backend_cls is X86_64TranslationBackend:
+                    backend.initialize(dump_handle, force_pml5=force_pml5)
+                else:
+                    backend.initialize(dump_handle)
                 logger.info("Architecture detected: %s", backend.get_architecture_name())
                 return backend
             dump_handle.seek(0)

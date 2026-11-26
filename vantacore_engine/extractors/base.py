@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from collections import deque
+import dataclasses
 import logging
 from pathlib import Path
 from typing import BinaryIO
@@ -11,12 +12,43 @@ from vantacore_engine.core.translation_base import TranslationBackend
 logger = logging.getLogger(__name__)
 
 
+@dataclasses.dataclass
+class HopTracker:
+    """Per-extractor hop consumption tracking for traversal cap reporting."""
+
+    hops_consumed: int = 0
+    truncated: bool = False
+    truncation_offset: int = 0
+
+
+class ExtractorSuccessRecord(dict):
+    """Dictionary representing a succeeded extractor with backwards-compatible string comparison."""
+
+    def __eq__(self, other: object) -> bool:
+        """Compare record against another record or string extractor name.
+
+        Args:
+            other: String name or dictionary to compare against.
+
+        Returns:
+            True if names match when compared to string, or standard dict equality.
+
+        """
+        if isinstance(other, str):
+            return self.get("name") == other
+        return super().__eq__(other)
+
+
 class BaseExtractor(ABC):
     """Abstract base class for all memory artifact extractors."""
 
     name: str = ""
     compatible_platforms: list[str] = []
     dependencies: list[str] = []
+
+    def __init__(self) -> None:
+        """Initialize extractor with fresh HopTracker."""
+        self._hop_tracker = HopTracker()
 
     @abstractmethod
     def run(
@@ -122,7 +154,7 @@ class ExtractorDAGExecutor:
             Dictionary containing merged extractor results and scan status block.
 
         """
-        succeeded: list[str] = []
+        succeeded_extractors: list[BaseExtractor] = []
         failed: list[str] = []
         skipped: list[str] = []
         merged_results: dict = {}
@@ -149,7 +181,7 @@ class ExtractorDAGExecutor:
                 res = extractor.run(backend, dump_handle, output_dir)
                 if isinstance(res, dict):
                     merged_results.update(res)
-                succeeded.append(extractor.name)
+                succeeded_extractors.append(extractor)
                 succeeded_set.add(extractor.name)
             except Exception as exc:
                 failed.append(extractor.name)
@@ -161,10 +193,20 @@ class ExtractorDAGExecutor:
 
         overall = "COMPLETE" if not failed and not skipped else "PARTIAL"
 
+        extractors_succeeded = [
+            ExtractorSuccessRecord(
+                name=e.name,
+                hops_consumed=getattr(e, "_hop_tracker", HopTracker()).hops_consumed,
+                truncated=getattr(e, "_hop_tracker", HopTracker()).truncated,
+                truncation_offset=getattr(e, "_hop_tracker", HopTracker()).truncation_offset,
+            )
+            for e in succeeded_extractors
+        ]
+
         return {
             "scan_status": {
                 "overall": overall,
-                "extractors_succeeded": succeeded,
+                "extractors_succeeded": extractors_succeeded,
                 "extractors_failed": failed,
                 "extractors_skipped": skipped,
             },

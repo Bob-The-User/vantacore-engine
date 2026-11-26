@@ -10,6 +10,7 @@ from elftools.elf.elffile import ELFFile
 
 from vantacore_engine.core.translation_base import TranslationBackend
 from vantacore_engine.extractors.base import BaseExtractor
+from vantacore_engine.utils.format_filter import filter_record
 
 logger = logging.getLogger(__name__)
 
@@ -142,15 +143,17 @@ class LinaProcessExtractor(BaseExtractor):
 
             for item in note_queue:
                 threads.append(
-                    {
-                        "pid": item["pid"],
-                        "ppid": item["ppid"],
-                        "name": item["name"],
-                        "args": item["args"],
-                        "source": "elf_note",
-                        "firmware_version": fw_version,
-                        "struct_layout_version": "N/A",
-                    }
+                    filter_record(
+                        {
+                            "pid": item["pid"],
+                            "ppid": item["ppid"],
+                            "name": item["name"],
+                            "args": item["args"],
+                            "source": "elf_note",
+                            "firmware_version": fw_version,
+                            "struct_layout_version": "N/A",
+                        }
+                    )
                 )
             if threads:
                 parsed_elf = True
@@ -166,18 +169,27 @@ class LinaProcessExtractor(BaseExtractor):
             dump_handle.seek(0, 2)
             total_size = dump_handle.tell()
             dump_handle.seek(0)
-            hops = 0
             seen_offsets: set[int] = set()
 
             while True:
                 offset = dump_handle.tell()
-                if offset >= total_size or hops >= _MAX_HOPS:
+                if offset >= total_size:
+                    break
+                if self._hop_tracker.hops_consumed >= _MAX_HOPS:
+                    self._hop_tracker.truncated = True
+                    self._hop_tracker.truncation_offset = offset
+                    logger.warning(
+                        "%s: 500K hop cap reached at 0x%x. Consumed %d hops. Results are truncated.",
+                        self.__class__.__name__,
+                        self._hop_tracker.truncation_offset,
+                        self._hop_tracker.hops_consumed,
+                    )
                     break
 
                 chunk = dump_handle.read(_CHUNK_SIZE)
                 if not chunk:
                     break
-                hops += 1
+                self._hop_tracker.hops_consumed += 1
 
                 pos = 0
                 while pos < len(chunk):
@@ -188,15 +200,17 @@ class LinaProcessExtractor(BaseExtractor):
                     if phys_off not in seen_offsets:
                         seen_offsets.add(phys_off)
                         threads.append(
-                            {
-                                "pid": 0,
-                                "ppid": 0,
-                                "name": "lina",
-                                "args": "",
-                                "source": "pattern_scan",
-                                "firmware_version": fw_version,
-                                "struct_layout_version": "N/A",
-                            }
+                            filter_record(
+                                {
+                                    "pid": 0,
+                                    "ppid": 0,
+                                    "name": "lina",
+                                    "args": "",
+                                    "source": "pattern_scan",
+                                    "firmware_version": fw_version,
+                                    "struct_layout_version": "N/A",
+                                }
+                            )
                         )
                         if len(threads) >= _MAX_NOTES:
                             break

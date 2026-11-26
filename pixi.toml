@@ -19,6 +19,7 @@ llvm-tools = ">=14"
 [pypi-dependencies]
 yara-python = ">=4.5"
 google-re2 = ">=1.1"
+spacy = ">=3.7"
 vantacore-engine = { path = ".", editable = true }
 
 [feature.dev.pypi-dependencies]
@@ -42,3 +43,4 @@ test = "pytest tests/unit/ -v --timeout=60"
 test-full = "pytest -v --timeout=300 --cov=vantacore_engine --cov-report=term-missing"
 lint = "ruff check vantacore_engine/ tests/"
 generate-fixtures = "python tests/fixtures/generate_fixtures.py"
+setup-spacy = "python -m spacy download en_core_web_sm"

@@ -61,6 +61,10 @@ def test_dag_executor_dependency_ordering() -> None:
     assert execution_order == ["b", "a"]
     assert res["scan_status"]["overall"] == "COMPLETE"
     assert res["scan_status"]["extractors_succeeded"] == ["test/b", "test/a"]
+    assert "hops_consumed" in res["scan_status"]["extractors_succeeded"][0]
+    assert "truncated" in res["scan_status"]["extractors_succeeded"][0]
+    assert "truncation_offset" in res["scan_status"]["extractors_succeeded"][0]
+    assert res["scan_status"]["extractors_succeeded"][0]["truncated"] is False
     assert res["b_data"] == 1
     assert res["a_data"] == 2
 

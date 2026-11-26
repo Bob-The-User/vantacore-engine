@@ -6,6 +6,7 @@ from typing import BinaryIO, Optional
 
 from vantacore_engine.core.translation_base import TranslationBackend
 from vantacore_engine.extractors.base import BaseExtractor
+from vantacore_engine.utils.format_filter import filter_record
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,7 @@ class ASAVPNSessionsExtractor(BaseExtractor):
             include_secrets: If True, include plaintext pre-shared keys in output.
 
         """
+        super().__init__()
         self._include_secrets = include_secrets
 
     def run(
@@ -112,20 +114,26 @@ class ASAVPNSessionsExtractor(BaseExtractor):
         psks: list[dict] = []
         seen_psk_offsets: set[int] = set()
         seen_session_keys: set[tuple[str, str]] = set()
-        hops = 0
 
         while True:
             offset = dump_handle.tell()
             if offset >= total_size:
                 break
-            if hops >= _MAX_HOPS:
-                logger.warning("ASAVPNSessionsExtractor: hop cap reached. Returning partial results.")
+            if self._hop_tracker.hops_consumed >= _MAX_HOPS:
+                self._hop_tracker.truncated = True
+                self._hop_tracker.truncation_offset = offset
+                logger.warning(
+                    "%s: 500K hop cap reached at 0x%x. Consumed %d hops. Results are truncated.",
+                    self.__class__.__name__,
+                    self._hop_tracker.truncation_offset,
+                    self._hop_tracker.hops_consumed,
+                )
                 break
 
             chunk = dump_handle.read(_CHUNK_SIZE)
             if not chunk:
                 break
-            hops += 1
+            self._hop_tracker.hops_consumed += 1
 
             # 1. Scan for pre-shared-key
             pos = 0
@@ -145,11 +153,13 @@ class ASAVPNSessionsExtractor(BaseExtractor):
                             phys_off,
                         )
                         psks.append(
-                            {
-                                "value": token if self._include_secrets else None,
-                                "redacted": not self._include_secrets,
-                                "physical_offset": phys_off,
-                            }
+                            filter_record(
+                                {
+                                    "value": token if self._include_secrets else None,
+                                    "redacted": not self._include_secrets,
+                                    "physical_offset": phys_off,
+                                }
+                            )
                         )
                 pos = idx + len(_PSK_PREFIX)
 
@@ -178,11 +188,13 @@ class ASAVPNSessionsExtractor(BaseExtractor):
                         if key not in seen_session_keys:
                             seen_session_keys.add(key)
                             sessions.append(
-                                {
-                                    "session_type": session_type,
-                                    "peer_ip": peer_ip,
-                                    "physical_offset": offset + idx,
-                                }
+                                filter_record(
+                                    {
+                                        "session_type": session_type,
+                                        "peer_ip": peer_ip,
+                                        "physical_offset": offset + idx,
+                                    }
+                                )
                             )
                     except Exception:
                         continue

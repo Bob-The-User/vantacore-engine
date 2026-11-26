@@ -91,11 +91,11 @@ def test_snmp_config_public_found_include_secrets(tmp_path: Path) -> None:
     """Verify SNMPConfigExtractor reveals plaintext when include_secrets is True."""
     ext = SNMPConfigExtractor(include_secrets=True)
     backend = FlatImageBackend()
-    data = b"\x00" * 128 + b"snmp-server community public RO\x00" + b"\x00" * 128
+    data = b"\x00" * 128 + b"snmp-server community corp_comm RO\x00" + b"\x00" * 128
     fh = io.BytesIO(data)
 
     res = ext.run(backend, fh, tmp_path)
     assert len(res["snmp_community_strings"]) >= 1
     entry = res["snmp_community_strings"][0]
     assert entry["redacted"] is False
-    assert entry["value"] == "public"
+    assert entry["value"] == "corp_comm"

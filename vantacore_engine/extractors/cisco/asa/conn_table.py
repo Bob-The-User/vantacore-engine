@@ -6,6 +6,7 @@ from typing import BinaryIO, Optional
 
 from vantacore_engine.core.translation_base import TranslationBackend
 from vantacore_engine.extractors.base import BaseExtractor
+from vantacore_engine.utils.format_filter import filter_record
 
 logger = logging.getLogger(__name__)
 
@@ -121,20 +122,26 @@ class ASAConnTableExtractor(BaseExtractor):
         connections: list[dict] = []
         conn_id_counter = 1
         seen_tuples: set[tuple[str, str, int, str, int]] = set()
-        hops = 0
 
         while True:
             offset = dump_handle.tell()
             if offset >= total_size:
                 break
-            if hops >= _MAX_HOPS:
-                logger.warning("ASAConnTableExtractor: hop cap reached. Returning partial results.")
+            if self._hop_tracker.hops_consumed >= _MAX_HOPS:
+                self._hop_tracker.truncated = True
+                self._hop_tracker.truncation_offset = offset
+                logger.warning(
+                    "%s: 500K hop cap reached at 0x%x. Consumed %d hops. Results are truncated.",
+                    self.__class__.__name__,
+                    self._hop_tracker.truncation_offset,
+                    self._hop_tracker.hops_consumed,
+                )
                 break
 
             chunk = dump_handle.read(_CHUNK_SIZE)
             if not chunk:
                 break
-            hops += 1
+            self._hop_tracker.hops_consumed += 1
 
             for pat in (b"   TCP ", b"   UDP ", b"   ICMP "):
                 pos = 0
@@ -205,7 +212,8 @@ class ASAConnTableExtractor(BaseExtractor):
                             "firmware_version": fw_version,
                             "struct_layout_version": "N/A",
                         }
-                        connections.append(conn_entry)
+                        filtered = filter_record(conn_entry)
+                        connections.append(filtered)
                         conn_id_counter += 1
 
                     except Exception:

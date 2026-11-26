@@ -120,7 +120,8 @@ def _cmd_scan(args: argparse.Namespace) -> None:
 
         arch_detector = ArchitectureDetector()
         fh.seek(0)
-        backend = arch_detector.detect(fh, file_size)
+        force_pml5 = getattr(args, "force_pml5", False)
+        backend = arch_detector.detect(fh, file_size, force_pml5=force_pml5)
         arch_name = backend.get_architecture_name()
 
         output_dir = (
@@ -361,6 +362,12 @@ def main() -> None:
         action="store_true",
         dest="include_secrets",
         help="Include extracted secrets in plaintext",
+    )
+    scan_parser.add_argument(
+        "--force-pml5",
+        action="store_true",
+        dest="force_pml5",
+        help="Force 5-level PML5 paging (override heuristic detection)",
     )
     scan_parser.add_argument("--workers", type=int, default=None, help="Number of worker processes")
     scan_parser.add_argument("--timeout", type=int, default=3600, help="Scan timeout in seconds")

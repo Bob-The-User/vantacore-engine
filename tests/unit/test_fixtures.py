@@ -10,9 +10,9 @@ FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 
 
 def test_all_fixture_files_exist(dump_path: Callable[[str], Path]) -> None:
-    """Verify that exactly seven binary fixture files exist."""
+    """Verify that exactly ten binary fixture files exist."""
     bin_files = list(FIXTURES_DIR.glob("*.bin"))
-    assert len(bin_files) == 7, f"Found {len(bin_files)} .bin files, expected 7"
+    assert len(bin_files) == 10, f"Found {len(bin_files)} .bin files, expected 10"
 
     expected_files = {
         "mock_elf_core_x86_64.bin",
@@ -22,6 +22,9 @@ def test_all_fixture_files_exist(dump_path: Callable[[str], Path]) -> None:
         "mock_cisco_asa_lina.bin",
         "mock_elf_msr_note.bin",
         "mock_pml4_dram.bin",
+        "mock_pml5_dram.bin",
+        "mock_kpti_dram.bin",
+        "mock_elf_nt_file.bin",
     }
     actual_names = {f.name for f in bin_files}
     assert actual_names == expected_files
@@ -37,6 +40,9 @@ def test_fixture_files_nonempty(dump_path: Callable[[str], Path]) -> None:
         "mock_cisco_asa_lina.bin",
         "mock_elf_msr_note.bin",
         "mock_pml4_dram.bin",
+        "mock_pml5_dram.bin",
+        "mock_kpti_dram.bin",
+        "mock_elf_nt_file.bin",
     ]:
         path = dump_path(filename)
         assert path.exists()
